@@ -1,26 +1,26 @@
-//Modify for generic axis TB
+//Generic axis TB
 
 `timescale 1ns / 1ps
 
-module axis_multiplier_tb();
+module simulation_wrapper_tb(); //we don't define input and output signals for TB
     localparam T = 10;
     
     reg aclk;
     reg aresetn;
+    
+// trigered by TB
     wire s_axis_tready;
     reg [31:0] s_axis_tdata;
     reg s_axis_tvalid;
     reg s_axis_tlast;
+    
+// Output    
     reg m_axis_tready;
     wire [31:0] m_axis_tdata;
     wire m_axis_tvalid;
     wire m_axis_tlast;
-    reg en;
-    reg [7:0] mult_const;
-    wire [31:0] word_count;
-    wire [31:0] frame_count;
-
-    axis_multiplier dut
+   
+    simulation_wrapper uut
     (
         .aclk(aclk),
         .aresetn(aresetn),
@@ -31,11 +31,7 @@ module axis_multiplier_tb();
         .m_axis_tready(m_axis_tready),
         .m_axis_tdata(m_axis_tdata),
         .m_axis_tvalid(m_axis_tvalid),
-        .m_axis_tlast(m_axis_tlast),
-        .en(en),
-        .mult_const(mult_const),
-        .word_count(word_count),
-        .frame_count(frame_count)
+        .m_axis_tlast(m_axis_tlast)
     );
     
     always
@@ -48,12 +44,11 @@ module axis_multiplier_tb();
 
     initial
     begin
+        // *** initial value ***
         s_axis_tdata = 0;
         s_axis_tvalid = 0;
         s_axis_tlast = 0;
         m_axis_tready = 1;
-        en = 0;
-        mult_const = 0;
         
         // *** Reset ***
         aresetn = 0;
@@ -61,31 +56,20 @@ module axis_multiplier_tb();
         aresetn = 1;
         #T
         
-        // *** Configure multiplier ***
-        en = 1;
-        mult_const = 5;
+        // Wait until s_axis_tready is one
+        #(T*10);
         
-        // *** Send 1, 2, 3 to multiplier ***
+        // *** Send data to AXIS FIFO ***
         s_axis_tvalid = 1;
-        s_axis_tdata = 1;
-        #(T*2);
-        s_axis_tdata = 2;
-        #(T*2);
-        s_axis_tdata = 3;
-        s_axis_tlast = 1;
-        #(T*2);
-        s_axis_tvalid = 0;
-        s_axis_tlast = 0;
-        
-        // *** Send 4, 5 to multiplier ***
-        s_axis_tvalid = 1;
-        s_axis_tdata = 4;
-        #(T*2);
-        s_axis_tdata = 5;
-        s_axis_tlast = 1;
-        #(T*2);
-        s_axis_tvalid = 0;
-        s_axis_tlast = 0;     
-    end
+        for (i = 0; i <= 15; i = i+1)
+            begin
+                s_axi_tdata = i;
+                if ( i == 15)
+                    s_axis_tlast = 1;
+                #T;
+            end
+        s_axi_tvalid = 0;
+        s_axi_tlast = 0;
 
 endmodule
+
